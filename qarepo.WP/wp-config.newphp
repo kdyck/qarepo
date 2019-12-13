@@ -1,0 +1,93 @@
+<?php
+/**
+ * The base configuration for WordPress
+ *
+ * The wp-config.php creation script uses this file during the
+ * installation. You don't have to use the web site, you can
+ * copy this file to "wp-config.php" and fill in the values.
+ *
+ * This file contains the following configurations:
+ *
+ * * MySQL settings
+ * * Secret keys
+ * * Database table prefix
+ * * ABSPATH
+ *
+ * @link https://codex.wordpress.org/Editing_wp-config.php
+ *
+ * @package WordPress
+ */
+
+/** Absolute path to the WordPress directory. */
+if ( ! defined( 'ABSPATH' ) ) {
+	define( 'ABSPATH', dirname( __FILE__ ) . '/' );
+}
+
+// Try environment variable 'WP_ENV'
+if (getenv('WP_ENV') !== false)
+	// Filter non-alphabetical characters for security
+	define('WP_ENV', preg_replace('/[^a-z]/', '', getenv('WP_ENV')));
+
+// Define site host
+if (isset($_SERVER['HTTP_X_FORWARDED_HOST']) && !empty($_SERVER['HTTP_X_FORWARDED_HOST'])) {
+	$hostname = $_SERVER['HTTP_X_FORWARDED_HOST'];
+} else {
+	$hostname = $_SERVER['HTTP_HOST'];
+}
+
+// If WordPress has been bootstrapped via WP-CLI detect environment from --env=<environment> argument
+if (PHP_SAPI == 'cli' && defined('WP_CLI_ROOT')) {
+	foreach ($argv as $arg)
+		if (preg_match('/--env=(.+)/', $arg, $m))
+			define('WP_ENV', $m[1]);
+	$hostname = 'localhost';
+}
+
+// Try server hostname
+if (!defined('WP_ENV'))
+	// Set environment based on hostname
+	include ABSPATH . '/wp-config.env.php';
+
+// Load default config
+include ABSPATH . '/wp-config/wp-config.default.php';
+
+// Load config file for current environment
+include ABSPATH . '/wp-config/wp-config.' . WP_ENV . '.php';
+
+// Define hostname
+if (!defined('SITE_HOSTNAME'))
+	define('SITE_HOSTNAME', rtrim(filter_var($hostname, FILTER_SANITIZE_STRING), '/'));
+
+// Are we in SSL mode?
+$isSSL = false;
+if ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] != 'off') ||
+	(!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https'))
+	$isSSL = true;
+
+// Check redirect to SSL
+if ((!$isSSL) && (defined('FORCE_SSL')) && (FORCE_SSL)) {
+	header('Location: ' . rtrim('https://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']), true, 301);
+	exit;
+}
+
+// Define WordPress Site URLs if not already set in config files
+$siteUrl = 'http' . (($isSSL) ? 's' : '') . '://' . SITE_HOSTNAME;
+if (!defined('WP_SITEURL'))
+    define('WP_SITEURL', $siteUrl);
+
+if (!defined('WP_HOME'))
+    define('WP_HOME', $siteUrl);
+
+// Define W3 Total Cache hostname
+if (defined('WP_CACHE'))
+    define('COOKIE_DOMAIN', SITE_HOSTNAME);
+
+// Clean up
+unset($hostname, $isSSL, $siteUrl);
+
+/** Sets up WordPress vars and included files. */
+require_once( ABSPATH . 'wp-settings.php' );
+
+/* That's all, stop editing! Happy publishing. */
+
+
